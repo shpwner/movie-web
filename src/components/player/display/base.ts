@@ -1,5 +1,6 @@
 import fscreen from "fscreen";
 import Hls, { Level } from "hls.js";
+import P2pEngineHls from "swarmcloud-hls";
 
 import {
   DisplayInterface,
@@ -32,6 +33,7 @@ const levelConversionMap: Record<number, SourceQuality> = {
 };
 
 function hlsLevelToQuality(level: Level): SourceQuality | null {
+  if (!level) return null;
   return levelConversionMap[level.height] ?? null;
 }
 
@@ -149,8 +151,15 @@ export function makeVideoElementDisplayInterface(): DisplayInterface {
           const quality = hlsLevelToQuality(hls.levels[hls.currentLevel]);
           emit("changedquality", quality);
         });
+      } else if ((hls as any).p2pEngine) {
+        (hls as any).p2pEngine.destroy();
       }
-
+      (hls as any).p2pEngine = new P2pEngineHls({
+        hlsjsInstance: hls,
+        live: false,
+        // trackerZone: 'hk',        // if using Hongkong tracker
+        // trackerZone: 'us',        // if using USA tracker
+      });
       hls.attachMedia(vid);
       hls.loadSource(processCdnLink(src.url));
       vid.currentTime = startAt;
